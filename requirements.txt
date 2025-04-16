@@ -1,0 +1,10 @@
+# requirements.txt (dev version)
+runpod
+diffusers
+transformers
+peft
+bitsandbytes
+torch==2.2.1
+Pillow
+timm
+
