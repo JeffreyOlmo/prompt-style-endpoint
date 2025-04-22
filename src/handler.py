@@ -2,39 +2,46 @@ import json
 import requests
 from PIL import Image
 from io import BytesIO
-from pathlib import Path
-
-# Use mock LLM if vllm isn't available (for local dev)
-try:
-    from vllm import LLM
-except ImportError:
-    from fake_vllm import LLM
+import base64
+import torch
+from transformers import CLIPProcessor, CLIPModel
+from vllm import LLM, SamplingParams
+from diffusers import DiffusionPipeline
 
 print("🐍 handler.py has started running")
 
+# --- Initialize CLIP for style embedding
+clip_model = CLIPModel.from_pretrained("openai/clip-vit-base-patch32").to("cuda")
+clip_processor = CLIPProcessor.from_pretrained("openai/clip-vit-base-patch32")
 
-# --- Initialize LLM (just once)
-llm = LLM()
+# --- Initialize Mistral with vLLM
+llm = LLM(model="mistralai/Mistral-7B-Instruct-v0.2", dtype="float16")
+params = SamplingParams(temperature=0.7, max_tokens=150)
 
-# --- Style image encoder (mock for now)
-def get_style_description(img_url):
-    print(f"[mock] Would download and embed: {img_url}")
-    return "soft pastel brushstrokes with watercolor bloom effects"
+# --- Initialize FLUX for image generation
+pipe = DiffusionPipeline.from_pretrained(
+    "black-forest-labs/FLUX.1-dev",
+    torch_dtype=torch.float16
+).to("cuda")
 
-# --- Prompt rewriting
-def rewrite_prompt(prompt, style_description):
-    template = (
+def embed_style(style_img_url):
+    image = Image.open(requests.get(style_img_url, stream=True).raw).convert("RGB")
+    inputs = clip_processor(images=image, return_tensors="pt").to("cuda")
+    with torch.no_grad():
+        embedding = clip_model.get_image_features(**inputs)
+    return embedding
+
+def rewrite_prompt(prompt, style_emb):
+    formatted = (
         f"User prompt: {prompt}\n"
-        f"Style: {style_description}\n\n"
+        f"Style: Described via CLIP embedding\n"
         "Rewrite the prompt to match the style. Return only the new prompt."
     )
-    new_prompt = llm.generate([template])[0]
-    return new_prompt
+    return llm.generate([formatted], sampling_params=params)[0].outputs[0].text.strip()
 
-# --- Image generation (mock for now)
 def generate_image(prompt):
-    print(f"[mock] Would generate image from prompt: {prompt}")
-    return "base64-encoded-image-data"
+    image = pipe(prompt=prompt, num_inference_steps=30).images[0]
+    return image
 
 # --- RunPod handler entry point
 def handler(event):
@@ -46,18 +53,33 @@ def handler(event):
         return {"error": "prompt and style_img_url are required"}
 
     # Style embedding
-    style_desc = get_style_description(style_url)
+    style_emb = embed_style(style_url)
 
     # Prompt reflection
-    new_prompt = rewrite_prompt(prompt, style_desc)
+    revised_prompt = rewrite_prompt(prompt, style_emb)
 
     # Generate image
-    image_b64 = generate_image(new_prompt)
+    image = generate_image(revised_prompt)
+
+    # Convert to base64
+    buffered = BytesIO()
+    image.save(buffered, format="PNG")
+    img_b64 = base64.b64encode(buffered.getvalue()).decode("utf-8")
 
     return {
-        "prompt_final": new_prompt,
-        "image_b64": image_b64
+        "prompt_final": revised_prompt,
+        "image_b64": img_b64
     }
+
+def log_feedback(prompt, style_img_url, revised, vote):
+    data = {
+        "prompt": prompt,
+        "style_img_url": style_img_url,
+        "revised": revised,
+        "vote": vote
+    }
+    with open("/workspace/feedback/feedback.jsonl", "a") as f:
+        f.write(json.dumps(data) + "\n")
 
 # Optional local test runner
 if __name__ == "__main__":
