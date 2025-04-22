@@ -2,6 +2,7 @@ FROM nvidia/cuda:12.2.0-runtime-ubuntu22.04
 
 RUN apt-get update && apt-get install -y \
     git wget curl python3 python3-pip patch xauth \
+    && ln -s /usr/bin/python3 /usr/bin/python \
     && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt /tmp
