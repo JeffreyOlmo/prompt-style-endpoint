@@ -1,10 +1,9 @@
-# requirements.txt (dev version)
-runpod
+torch==2.2.1
+vllm
 diffusers
 transformers
 peft
 bitsandbytes
-torch==2.2.1
 Pillow
 timm
-
+numpy<2.0
