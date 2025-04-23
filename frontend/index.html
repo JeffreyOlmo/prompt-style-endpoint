@@ -47,7 +47,35 @@
       font-family: 'Inter', sans-serif;
       background-color: #000000;
       color: #ededf0;
+      position: relative;
+      overflow-x: hidden;
     }
+    
+    /* Purple glow elements */
+    body::before {
+      content: '';
+      position: fixed;
+      top: -50%;
+      left: -10%;
+      width: 60%;
+      height: 200%;
+      background: radial-gradient(circle, rgba(88, 101, 242, 0.15) 0%, rgba(0, 0, 0, 0) 70%);
+      z-index: -1;
+      pointer-events: none;
+    }
+    
+    body::after {
+      content: '';
+      position: fixed;
+      top: 20%;
+      right: -10%;
+      width: 70%;
+      height: 200%;
+      background: radial-gradient(circle, rgba(88, 101, 242, 0.1) 0%, rgba(0, 0, 0, 0) 70%);
+      z-index: -1;
+      pointer-events: none;
+    }
+    
     .image-container {
       position: relative;
       overflow: hidden;
@@ -60,21 +88,31 @@
       transform: scale(1.02);
     }
     .gradient-text {
-      background: linear-gradient(90deg, #5865f2, #a2aaff);
+      background: linear-gradient(135deg, #5865f2, #cb5eee);
       -webkit-background-clip: text;
       background-clip: text;
       color: transparent;
+      text-shadow: 0 0 30px rgba(88, 101, 242, 0.5);
+    }
+    
+    .content-wrapper {
+      max-width: 1024px;
+      margin: 0 auto;
+      width: 100%;
+      padding: 0 24px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
     }
   </style>
 </head>
-<body class="min-h-screen bg-ui-black">
-  <div class="container mx-auto px-6 py-12 max-w-5xl">
-    <h1 class="text-5xl font-bold mb-2 text-center gradient-text">Style Guide</h1>
-    <p class="text-center text-ui-gray-300 mb-12">Transform your prompts with visual style inspiration</p>
+<body class="min-h-screen bg-ui-black flex items-center justify-center">
+  <div class="content-wrapper py-12">
+    <h1 class="text-5xl font-bold mb-12 gradient-text">Style Guide</h1>
     
-    <div class="grid md:grid-cols-2 gap-8">
+    <div class="flex flex-col gap-8 items-center w-full">
       <!-- Input Section -->
-      <div class="space-y-6 bg-ui-gray-900 p-8 rounded-xl border border-ui-gray-700">
+      <div class="space-y-6 bg-ui-gray-900 p-8 rounded-xl border border-ui-gray-700 shadow-glow max-w-xl w-full">
         <div>
           <label class="block mb-2 font-medium text-ui-gray-100">Text Prompt</label>
           <input id="promptInput" type="text"
@@ -108,7 +146,7 @@
       </div>
 
       <!-- Result Section -->
-      <div id="resultArea" class="hidden bg-ui-gray-900 p-8 rounded-xl border border-ui-gray-700">
+      <div id="resultArea" class="hidden bg-ui-gray-900 p-8 rounded-xl border border-ui-gray-700 shadow-glow max-w-3xl w-full">
         <div class="space-y-6">
           <div class="space-y-4">
             <div class="bg-ui-gray-800 rounded-lg p-4">
