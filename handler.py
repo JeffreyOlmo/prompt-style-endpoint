@@ -16,7 +16,7 @@ os.environ["TRANSFORMERS_CACHE"] = "/workspace/.cache"
 print("🐍 handler.py has started running")
 
 # --- Initialize DeepSeek Multimodal Model
-model_path = "deepseek-ai/deepseek-vl-7b-chat"
+model_path = "/workspace/.cache/huggingface/models--deepseek-ai--deepseek-vl-7b-chat"
 vl_chat_processor = VLChatProcessor.from_pretrained(model_path)
 tokenizer = vl_chat_processor.tokenizer
 vl_gpt = AutoModelForCausalLM.from_pretrained(model_path, trust_remote_code=True)
