@@ -30,7 +30,14 @@ pipe = DiffusionPipeline.from_pretrained(
 
 def reflect_prompt(prompt, style_img_url):
     # Download the image from the URL
-    response = requests.get(style_img_url)
+    headers = {
+    "User-Agent": "Mozilla/5.0"
+    }
+    response = requests.get(style_img_url, headers=headers)
+    
+    if response.status_code != 200 or "image" not in response.headers.get("Content-Type", ""):
+        raise ValueError(f"Failed to fetch valid image. Status: {response.status_code}, Headers: {response.headers}")
+    
     image = Image.open(BytesIO(response.content)).convert("RGB")
 
     # Save the image temporarily
