@@ -13,6 +13,7 @@ RUN pip install --upgrade pip && \
 
 # DeepSeek-VL (install from GitHub if not using local clone)
 RUN pip install git+https://github.com/deepseek-ai/DeepSeek-VL.git
+RUN mkdir -p /workspace/.cache
 
 # Create feedback directory (optional logging)
 RUN mkdir -p /workspace/feedback
