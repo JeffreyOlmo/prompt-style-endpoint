@@ -1,15 +1,21 @@
 FROM nvidia/cuda:12.2.0-runtime-ubuntu22.04
 
+# Basic tools and Python
 RUN apt-get update && apt-get install -y \
-    git wget curl python3 python3-pip patch xauth \
-    && ln -s /usr/bin/python3 /usr/bin/python \
+    git wget curl python3 python3-pip \
     && rm -rf /var/lib/apt/lists/*
 
-COPY requirements.txt /tmp
-RUN pip install --no-cache-dir -r /tmp/requirements.txt
+# Upgrade pip and install Python packages
+RUN pip install --upgrade pip
+RUN pip install torch torchvision --index-url https://download.pytorch.org/whl/cu118
+RUN pip install transformers accelerate
 
-COPY src /workspace
-WORKDIR /workspace
+# DeepSeek-VL repo
+RUN git clone https://github.com/deepseek-ai/DeepSeek-VL.git /workspace/DeepSeek-VL
+WORKDIR /workspace/DeepSeek-VL
+RUN pip install -e .
 
-ENV HF_TOKEN=<your-hf-token-if-needed>
-CMD ["python", "-u", "handler.py"]
+# Your handler
+COPY handler.py /workspace/handler.py
+
+CMD ["python3", "-u", "handler.py"]
