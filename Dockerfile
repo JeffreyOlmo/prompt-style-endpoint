@@ -17,4 +17,5 @@ RUN pip install -e .
 
 # Your handler
 COPY handler.py /workspace/handler.py
+WORKDIR /workspace
 CMD ["python3", "-u", "handler.py"]
