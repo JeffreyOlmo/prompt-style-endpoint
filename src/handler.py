@@ -4,46 +4,54 @@ from PIL import Image
 from io import BytesIO
 import base64
 import torch
-from transformers import CLIPProcessor, CLIPModel
-from vllm import LLM, SamplingParams
-from diffusers import DiffusionPipeline
+from transformers import AutoModelForCausalLM
+from deepseek_vl.models import VLChatProcessor
+from deepseek_vl.utils.io import load_pil_images
 
 print("🐍 handler.py has started running")
 
-# --- Initialize CLIP for style embedding
-clip_model = CLIPModel.from_pretrained("openai/clip-vit-base-patch32").to("cuda")
-clip_processor = CLIPProcessor.from_pretrained("openai/clip-vit-base-patch32")
+# --- Initialize DeepSeek-VL
+model_path = "deepseek-ai/deepseek-vl-7b-chat"
+processor = VLChatProcessor.from_pretrained(model_path)
+tokenizer = processor.tokenizer
+model = AutoModelForCausalLM.from_pretrained(model_path, trust_remote_code=True)
+model = model.to(torch.bfloat16).cuda().eval()
 
-# --- Initialize Mistral with vLLM
-llm = LLM(model="mistralai/Mistral-7B-Instruct-v0.2", dtype="float16")
-params = SamplingParams(temperature=0.7, max_tokens=150)
+def download_image(url):
+    response = requests.get(url)
+    return Image.open(BytesIO(response.content)).convert("RGB")
 
-# --- Initialize FLUX for image generation
-pipe = DiffusionPipeline.from_pretrained(
-    "black-forest-labs/FLUX.1-dev",
-    torch_dtype=torch.float16
-).to("cuda")
+def reflect_prompt(prompt, style_img_url):
+    image = download_image(style_img_url)
 
-def embed_style(style_img_url):
-    image = Image.open(requests.get(style_img_url, stream=True).raw).convert("RGB")
-    inputs = clip_processor(images=image, return_tensors="pt").to("cuda")
-    with torch.no_grad():
-        embedding = clip_model.get_image_features(**inputs)
-    return embedding
+    conversation = [
+        {
+            "role": "User",
+            "content": f"Rewrite this prompt to match the style of the image: {prompt}",
+            "images": [image]
+        },
+        {
+            "role": "Assistant",
+            "content": ""
+        }
+    ]
 
-def rewrite_prompt(prompt, style_emb):
-    formatted = (
-        f"User prompt: {prompt}\n"
-        f"Style: Described via CLIP embedding\n"
-        "Rewrite the prompt to match the style. Return only the new prompt."
+    inputs = processor(conversation, images=[image], force_batchify=True).to(model.device)
+    inputs_embeds = model.prepare_inputs_embeds(**inputs)
+
+    outputs = model.language_model.generate(
+        inputs_embeds=inputs_embeds,
+        attention_mask=inputs.attention_mask,
+        pad_token_id=tokenizer.eos_token_id,
+        bos_token_id=tokenizer.bos_token_id,
+        eos_token_id=tokenizer.eos_token_id,
+        max_new_tokens=150,
+        do_sample=False
     )
-    return llm.generate([formatted], sampling_params=params)[0].outputs[0].text.strip()
 
-def generate_image(prompt):
-    image = pipe(prompt=prompt, num_inference_steps=30).images[0]
-    return image
+    decoded = tokenizer.decode(outputs[0], skip_special_tokens=True)
+    return decoded
 
-# --- RunPod handler entry point
 def handler(event):
     inp = event.get("input", {})
     prompt = inp.get("prompt", "")
@@ -52,23 +60,11 @@ def handler(event):
     if not prompt or not style_url:
         return {"error": "prompt and style_img_url are required"}
 
-    # Style embedding
-    style_emb = embed_style(style_url)
-
-    # Prompt reflection
-    revised_prompt = rewrite_prompt(prompt, style_emb)
-
-    # Generate image
-    image = generate_image(revised_prompt)
-
-    # Convert to base64
-    buffered = BytesIO()
-    image.save(buffered, format="PNG")
-    img_b64 = base64.b64encode(buffered.getvalue()).decode("utf-8")
+    revised_prompt = reflect_prompt(prompt, style_url)
 
     return {
         "prompt_final": revised_prompt,
-        "image_b64": img_b64
+        "image_b64": None  # No image gen yet
     }
 
 def log_feedback(prompt, style_img_url, revised, vote):
@@ -81,14 +77,12 @@ def log_feedback(prompt, style_img_url, revised, vote):
     with open("/workspace/feedback/feedback.jsonl", "a") as f:
         f.write(json.dumps(data) + "\n")
 
-# Optional local test runner
 if __name__ == "__main__":
     example_event = {
         "input": {
             "prompt": "A wizard in the forest",
-            "style_img_url": "https://example.com/style.jpg"
+            "style_img_url": "https://i.imgur.com/ZcLLrkY.jpg"
         }
     }
     result = handler(example_event)
     print(json.dumps(result, indent=2))
-
