@@ -33,16 +33,36 @@ async function pollJobStatus(jobId) {
     dots = ".".repeat(pollCounter % 4);
     generateBtn.innerHTML = `${loadingSpinner} Processing${dots}`;
     
-    const res = await fetch(statusEndpoint, {
-      headers: { "Authorization": RUNPOD_API_KEY }
-    });
-    const data = await res.json();
-    console.error("Status check:", data);
+    try {
+      const res = await fetch(statusEndpoint, {
+        headers: { "Authorization": RUNPOD_API_KEY }
+      });
+      
+      if (!res.ok) {
+        console.error("Non-OK response from status endpoint:", res.status, res.statusText);
+        throw new Error(`Failed to check job status: ${res.status} ${res.statusText}`);
+      }
+      
+      const raw = await res.text();
+      console.error("Raw status response:", raw);
+      
+      let data;
+      try {
+        data = JSON.parse(raw);
+      } catch (e) {
+        console.error("Failed to parse status response:", e);
+        throw new Error("Invalid JSON in status response");
+      }
+      
+      console.error("Status check:", data);
 
-    if (data.status === "COMPLETED") {
-      return data;
-    } else if (data.status === "FAILED") {
-      throw new Error(data.error || "Job failed");
+      if (data.status === "COMPLETED") {
+        return data;
+      } else if (data.status === "FAILED") {
+        throw new Error(data.error || "Job failed");
+      }
+    } catch (e) {
+      console.error("Error polling status:", e);
     }
     
     // Wait 1 second before polling again
@@ -75,6 +95,9 @@ generateBtn.addEventListener("click", async () => {
       // Submit the job
       generateBtn.innerHTML = `${loadingSpinner} Uploading...`;
       
+      console.error("Submitting job with prompt:", prompt);
+      console.error("Base64 image length:", base64.length);
+      
       const res = await fetch(RUNPOD_ENDPOINT, {
         method: "POST",
         headers: { 
@@ -89,6 +112,11 @@ generateBtn.addEventListener("click", async () => {
         })
       });
 
+      if (!res.ok) {
+        console.error("Non-OK response from endpoint:", res.status, res.statusText);
+        throw new Error(`Failed to submit job: ${res.status} ${res.statusText}`);
+      }
+      
       const raw = await res.text();
       console.error("\n\n🌐 INITIAL RESPONSE FROM RUNPOD:");
       console.error(raw);
@@ -103,6 +131,7 @@ generateBtn.addEventListener("click", async () => {
       }
 
       if (!submitResponse.id) {
+        console.error("No job ID in response:", submitResponse);
         throw new Error("No job ID returned");
       }
 
@@ -111,28 +140,89 @@ generateBtn.addEventListener("click", async () => {
 
       // Poll for results
       const result = await pollJobStatus(submitResponse.id);
-      console.error("✅ Job completed:", result);
+      console.error("✅ Job completed full result:", JSON.stringify(result, null, 2));
 
-      // The data structure from RunPod includes a nested output object
-      if (!result || !result.output) {
-        console.error("Invalid response structure:", result);
-        throw new Error("Invalid response from server: missing output data");
+      // Deeply inspect the structure
+      for (const key in result) {
+        console.error(`Top-level key: ${key}, Type: ${typeof result[key]}`);
+        if (typeof result[key] === 'object' && result[key] !== null) {
+          for (const subKey in result[key]) {
+            console.error(`  Subkey: ${subKey}, Type: ${typeof result[key][subKey]}`);
+            if (subKey === 'image_b64' || subKey === 'prompt_final') {
+              const value = result[key][subKey];
+              console.error(`  ${subKey} is ${value ? (typeof value === 'string' ? `string of length ${value.length}` : typeof value) : 'undefined'}`);
+            }
+          }
+        }
       }
       
-      console.error("Output data:", result.output);
+      // Try multiple ways to access the data
+      let prompt_final = '';
+      let image_b64 = '';
       
-      const prompt_final = result.output.prompt_final || "No adjusted prompt returned";
-      const image_b64 = result.output.image_b64;
+      // Method 1: Direct access through output (now checking for double-nested output)
+      if (result.output && typeof result.output === 'object') {
+        console.error("Trying method 1: Direct access through output");
+        
+        // Check for double-nested output structure
+        if (result.output.output && typeof result.output.output === 'object') {
+          console.error("Found double-nested output structure");
+          prompt_final = result.output.output.prompt_final || '';
+          image_b64 = result.output.output.image_b64 || '';
+        } else {
+          // Original structure
+          prompt_final = result.output.prompt_final || '';
+          image_b64 = result.output.image_b64 || '';
+        }
+        console.error(`Method 1 results - prompt_final: ${prompt_final ? 'found' : 'not found'}, image_b64: ${image_b64 ? 'found' : 'not found'}`);
+      }
+      
+      // Method 2: Try to parse output if it's a string
+      if (!image_b64 && result.output && typeof result.output === 'string') {
+        console.error("Trying method 2: Parse output string");
+        try {
+          const parsedOutput = JSON.parse(result.output);
+          prompt_final = parsedOutput.prompt_final || prompt_final;
+          image_b64 = parsedOutput.image_b64 || image_b64;
+          console.error(`Method 2 results - prompt_final: ${prompt_final ? 'found' : 'not found'}, image_b64: ${image_b64 ? 'found' : 'not found'}`);
+        } catch (e) {
+          console.error("Failed to parse output string:", e);
+        }
+      }
+      
+      // Method 3: Look for data in any property
+      if (!image_b64) {
+        console.error("Trying method 3: Search in all properties");
+        for (const key in result) {
+          if (typeof result[key] === 'object' && result[key]) {
+            if (result[key].image_b64) {
+              console.error(`Found image_b64 in result.${key}`);
+              image_b64 = result[key].image_b64;
+            }
+            if (result[key].prompt_final) {
+              console.error(`Found prompt_final in result.${key}`);
+              prompt_final = result[key].prompt_final;
+            }
+          }
+        }
+        console.error(`Method 3 results - prompt_final: ${prompt_final ? 'found' : 'not found'}, image_b64: ${image_b64 ? 'found' : 'not found'}`);
+      }
       
       if (!image_b64) {
-        console.error("No image data in response:", result.output);
+        console.error("No image data found in response after all attempts.");
         throw new Error("No image data returned from the server");
+      }
+      
+      // Set the prompt value even if missing
+      if (!prompt_final) {
+        prompt_final = "Style-adjusted prompt not available";
       }
       
       // Preload image
       const img = new Image();
       img.onerror = (e) => {
         console.error("Image load error:", e);
+        console.error("First 100 chars of image_b64:", image_b64.substring(0, 100));
         showNotification("Error loading generated image", "error");
       };
       img.onload = () => {
