@@ -16,5 +16,5 @@ WORKDIR /workspace/DeepSeek-VL
 RUN pip install -e .
 
 # Your handler
-COPY src/handler.py /workspace/handler.py
+COPY handler.py /workspace/handler.py
 CMD ["python3", "-u", "handler.py"]
