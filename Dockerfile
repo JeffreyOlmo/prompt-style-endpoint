@@ -16,11 +16,10 @@ RUN pip install git+https://github.com/deepseek-ai/DeepSeek-VL.git
 
 # --- Set up model cache directory
 ENV HF_HOME=/workspace/.cache/huggingface
-RUN mkdir -p $TRANSFORMERS_CACHE
+RUN mkdir -p /workspace/.cache/huggingface
 
 # --- Pre-download DeepSeek model weights
-RUN python3 -c "from huggingface_hub import snapshot_download; snapshot_download(repo_id='deepseek-ai/deepseek-vl-7b-chat',local_dir='/workspace/.cache/huggingface/models--deepseek-ai--deepseek-vl-7b-chat',local_dir_use_symlinks=False)
-
+RUN python3 -c "from huggingface_hub import snapshot_download; snapshot_download(repo_id='deepseek-ai/deepseek-vl-7b-chat', local_dir='/workspace/.cache/huggingface/models--deepseek-ai--deepseek-vl-7b-chat', local_dir_use_symlinks=False)"
 
 # --- Optional: create a logging folder
 RUN mkdir -p /workspace/feedback
