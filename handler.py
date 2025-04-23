@@ -9,9 +9,10 @@ from deepseek_vl.models import VLChatProcessor, MultiModalityCausalLM
 from deepseek_vl.utils.io import load_pil_images
 from diffusers import DiffusionPipeline
 import os
+import runpod
+
 os.environ["HF_HOME"] = "/workspace/.cache"
 os.environ["TRANSFORMERS_CACHE"] = "/workspace/.cache"
-
 
 print("🐍 handler.py has started running")
 
@@ -127,12 +128,6 @@ def handler(event):
         }
     }
 
-if __name__ == "__main__":
-    example_event = {
-        "input": {
-            "prompt": "A wizard in the forest",
-            "style_img_url": "https://i.imgur.com/ZcLLrkY.jpg"
-        }
-    }
-    result = handler(example_event)
-    print(json.dumps(result, indent=2))
+runpod.serverless.start({
+    "handler": handler
+})

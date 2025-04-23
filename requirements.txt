@@ -7,3 +7,4 @@ bitsandbytes
 Pillow
 timm
 numpy<2.0
+runpod
