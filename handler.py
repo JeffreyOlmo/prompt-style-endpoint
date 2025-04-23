@@ -120,8 +120,11 @@ def handler(event):
     img_b64 = base64.b64encode(buffered.getvalue()).decode("utf-8")
 
     return {
-        "prompt_final": revised_prompt,
-        "image_b64": img_b64
+        "status": "COMPLETED",
+        "output": {
+            "prompt_final": revised_prompt,
+            "image_b64": img_b64
+        }
     }
 
 if __name__ == "__main__":
