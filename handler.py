@@ -29,17 +29,29 @@ pipe = DiffusionPipeline.from_pretrained(
 ).to("cuda")
 
 def reflect_prompt(prompt, style_img_url):
-    conversation = [{
-        "role": "User",
-        "content": f"Rewrite the prompt to match the style.",
-        "images": [style_img_url]
-    }, {
-        "role": "User",
-        "content": prompt
-    }, {
-        "role": "Assistant",
-        "content": ""
-    }]
+    # Download the image from the URL
+    response = requests.get(style_img_url)
+    image = Image.open(BytesIO(response.content)).convert("RGB")
+
+    # Save the image temporarily
+    local_image_path = "/tmp/style_image.jpg"
+    image.save(local_image_path)
+
+    conversation = [
+        {
+            "role": "User",
+            "content": f"Rewrite the prompt to match the style.",
+            "images": [local_image_path],
+        },
+        {
+            "role": "User",
+            "content": prompt,
+        },
+        {
+            "role": "Assistant",
+            "content": "",
+        },
+    ]
 
     pil_images = load_pil_images(conversation)
     prepare_inputs = vl_chat_processor(
@@ -60,6 +72,7 @@ def reflect_prompt(prompt, style_img_url):
         use_cache=True
     )
     return tokenizer.decode(outputs[0], skip_special_tokens=True).strip()
+
 
 def generate_image(prompt):
     image = pipe(prompt=prompt, num_inference_steps=30).images[0]
