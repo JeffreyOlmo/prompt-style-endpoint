@@ -28,17 +28,36 @@ pipe = DiffusionPipeline.from_pretrained(
     torch_dtype=torch.float16
 ).to("cuda")
 
-def reflect_prompt(prompt, style_img_url):
-    # Download the image from the URL
-    headers = {
-    "User-Agent": "Mozilla/5.0"
-    }
-    response = requests.get(style_img_url, headers=headers)
-    
-    if response.status_code != 200 or "image" not in response.headers.get("Content-Type", ""):
-        raise ValueError(f"Failed to fetch valid image. Status: {response.status_code}, Headers: {response.headers}")
-    
-    image = Image.open(BytesIO(response.content)).convert("RGB")
+def get_image_from_url_or_base64(url_or_base64):
+    try:
+        # First try to decode as base64
+        if isinstance(url_or_base64, str) and ',' in url_or_base64:
+            # Handle data URL format
+            base64_data = url_or_base64.split(',')[1]
+        else:
+            base64_data = url_or_base64
+            
+        try:
+            image_data = base64.b64decode(base64_data)
+            return Image.open(BytesIO(image_data)).convert("RGB")
+        except:
+            # If base64 decode fails, treat as URL
+            headers = {"User-Agent": "Mozilla/5.0"}
+            response = requests.get(url_or_base64, headers=headers)
+            
+            if response.status_code != 200 or "image" not in response.headers.get("Content-Type", ""):
+                raise ValueError(f"Failed to fetch valid image. Status: {response.status_code}")
+            
+            return Image.open(BytesIO(response.content)).convert("RGB")
+    except Exception as e:
+        raise ValueError(f"Failed to load image: {str(e)}")
+
+def reflect_prompt(prompt, style_img):
+    # Convert input to PIL Image if needed
+    if isinstance(style_img, str):
+        image = get_image_from_url_or_base64(style_img)
+    else:
+        image = style_img
 
     # Save the image temporarily
     local_image_path = "/tmp/style_image.jpg"
@@ -88,12 +107,12 @@ def generate_image(prompt):
 def handler(event):
     inp = event.get("input", {})
     prompt = inp.get("prompt", "")
-    style_url = inp.get("style_img_url", "")
+    style_img = inp.get("style_img_b64") or inp.get("style_img_url")
 
-    if not prompt or not style_url:
-        return {"error": "prompt and style_img_url are required"}
+    if not prompt or not style_img:
+        return {"error": "prompt and either style_img_url or style_img_b64 are required"}
 
-    revised_prompt = reflect_prompt(prompt, style_url)
+    revised_prompt = reflect_prompt(prompt, style_img)
     image = generate_image(revised_prompt)
 
     buffered = BytesIO()
