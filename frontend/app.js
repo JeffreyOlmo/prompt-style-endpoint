@@ -7,6 +7,8 @@ const resultArea  = document.getElementById("resultArea");
 const resultImg   = document.getElementById("resultImg");
 const thumbsUp    = document.getElementById("thumbsUp");
 const thumbsDown  = document.getElementById("thumbsDown");
+const originalPromptEl = document.getElementById("originalPrompt");
+const adjustedPromptEl = document.getElementById("adjustedPrompt");
 
 let lastPrompt = "";
 let lastStyleB64 = "";
@@ -38,9 +40,15 @@ generateBtn.addEventListener("click", async () => {
     return alert("Please enter a prompt and select a style image.");
   }
 
-  // Disable UI
+  // Disable UI and show loading state
   generateBtn.disabled = true;
-  generateBtn.textContent = "Generating…";
+  generateBtn.innerHTML = `
+    <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+      <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+    </svg>
+    Generating...
+  `;
 
   // Read image as base64
   const reader = new FileReader();
@@ -84,15 +92,23 @@ generateBtn.addEventListener("click", async () => {
       }
 
       console.error("📝 Job submitted, ID:", submitResponse.id);
-      generateBtn.textContent = "Processing...";
+      generateBtn.innerHTML = `
+        <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+        Processing...
+      `;
 
       // Poll for results
       const result = await pollJobStatus(submitResponse.id);
       console.error("✅ Job completed:", result);
 
       // Show result
-      const { image_b64 } = result.output;
+      const { prompt_final, image_b64 } = result.output;
       resultImg.src = "data:image/png;base64," + image_b64;
+      originalPromptEl.textContent = prompt;
+      adjustedPromptEl.textContent = prompt_final;
       resultArea.classList.remove("hidden");
 
     } catch (e) {
