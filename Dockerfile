@@ -15,7 +15,7 @@ RUN pip install --upgrade pip && \
 RUN pip install git+https://github.com/deepseek-ai/DeepSeek-VL.git
 
 # --- Set up model cache directory
-ENV TRANSFORMERS_CACHE=/workspace/.cache/huggingface
+ENV HF_HOME=/workspace/.cache/huggingface
 RUN mkdir -p $TRANSFORMERS_CACHE
 
 # --- Pre-download DeepSeek model weights
