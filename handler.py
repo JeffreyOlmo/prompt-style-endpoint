@@ -71,7 +71,7 @@ def reflect_prompt(prompt, style_img):
     conversation = [
         {
             "role": "User",
-            "content": f"Rewrite the prompt to match the style, colors, and theme of the reference image; be verbose and detailed.",
+            "content": f"Rewrite the prompt to match the style, colors, and theme of this reference image: <image_placeholder>; be verbose and detailed while maintaining fidelity to the original prompt",
             "images": [local_image_path],
         },
         {
