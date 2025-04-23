@@ -5,52 +5,61 @@ from io import BytesIO
 import base64
 import torch
 from transformers import AutoModelForCausalLM
-from deepseek_vl.models import VLChatProcessor
+from deepseek_vl.models import VLChatProcessor, MultiModalityCausalLM
 from deepseek_vl.utils.io import load_pil_images
+from diffusers import DiffusionPipeline
 
 print("🐍 handler.py has started running")
 
-# --- Initialize DeepSeek-VL
+# --- Initialize DeepSeek Multimodal Model
 model_path = "deepseek-ai/deepseek-vl-7b-chat"
-processor = VLChatProcessor.from_pretrained(model_path)
-tokenizer = processor.tokenizer
-model = AutoModelForCausalLM.from_pretrained(model_path, trust_remote_code=True)
-model = model.to(torch.bfloat16).cuda().eval()
+vl_chat_processor = VLChatProcessor.from_pretrained(model_path)
+tokenizer = vl_chat_processor.tokenizer
+vl_gpt = AutoModelForCausalLM.from_pretrained(model_path, trust_remote_code=True)
+vl_gpt = vl_gpt.to(torch.bfloat16).cuda().eval()
 
-def download_image(url):
-    response = requests.get(url)
-    return Image.open(BytesIO(response.content)).convert("RGB")
+# --- Initialize FLUX for image generation
+pipe = DiffusionPipeline.from_pretrained(
+    "black-forest-labs/FLUX.1-dev",
+    torch_dtype=torch.float16
+).to("cuda")
 
 def reflect_prompt(prompt, style_img_url):
-    image = download_image(style_img_url)
+    conversation = [{
+        "role": "User",
+        "content": f"Rewrite the prompt to match the style.",
+        "images": [style_img_url]
+    }, {
+        "role": "User",
+        "content": prompt
+    }, {
+        "role": "Assistant",
+        "content": ""
+    }]
 
-    conversation = [
-        {
-            "role": "User",
-            "content": f"Rewrite this prompt to match the style of the image: {prompt}",
-            "images": [image]
-        },
-        {
-            "role": "Assistant",
-            "content": ""
-        }
-    ]
+    pil_images = load_pil_images(conversation)
+    prepare_inputs = vl_chat_processor(
+        conversations=conversation,
+        images=pil_images,
+        force_batchify=True
+    ).to(vl_gpt.device)
 
-    inputs = processor(conversation, images=[image], force_batchify=True).to(model.device)
-    inputs_embeds = model.prepare_inputs_embeds(**inputs)
-
-    outputs = model.language_model.generate(
+    inputs_embeds = vl_gpt.prepare_inputs_embeds(**prepare_inputs)
+    outputs = vl_gpt.language_model.generate(
         inputs_embeds=inputs_embeds,
-        attention_mask=inputs.attention_mask,
+        attention_mask=prepare_inputs.attention_mask,
         pad_token_id=tokenizer.eos_token_id,
         bos_token_id=tokenizer.bos_token_id,
         eos_token_id=tokenizer.eos_token_id,
         max_new_tokens=150,
-        do_sample=False
+        do_sample=False,
+        use_cache=True
     )
+    return tokenizer.decode(outputs[0], skip_special_tokens=True).strip()
 
-    decoded = tokenizer.decode(outputs[0], skip_special_tokens=True)
-    return decoded
+def generate_image(prompt):
+    image = pipe(prompt=prompt, num_inference_steps=30).images[0]
+    return image
 
 def handler(event):
     inp = event.get("input", {})
@@ -61,21 +70,16 @@ def handler(event):
         return {"error": "prompt and style_img_url are required"}
 
     revised_prompt = reflect_prompt(prompt, style_url)
+    image = generate_image(revised_prompt)
+
+    buffered = BytesIO()
+    image.save(buffered, format="PNG")
+    img_b64 = base64.b64encode(buffered.getvalue()).decode("utf-8")
 
     return {
         "prompt_final": revised_prompt,
-        "image_b64": None  # No image gen yet
+        "image_b64": img_b64
     }
-
-def log_feedback(prompt, style_img_url, revised, vote):
-    data = {
-        "prompt": prompt,
-        "style_img_url": style_img_url,
-        "revised": revised,
-        "vote": vote
-    }
-    with open("/workspace/feedback/feedback.jsonl", "a") as f:
-        f.write(json.dumps(data) + "\n")
 
 if __name__ == "__main__":
     example_event = {
