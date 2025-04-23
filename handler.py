@@ -10,6 +10,8 @@ from deepseek_vl.utils.io import load_pil_images
 from diffusers import DiffusionPipeline
 import os
 import runpod
+import sys
+import traceback
 
 os.environ["HF_HOME"] = "/workspace/.cache"
 os.environ["TRANSFORMERS_CACHE"] = "/workspace/.cache"
@@ -54,6 +56,7 @@ def get_image_from_url_or_base64(url_or_base64):
         raise ValueError(f"Failed to load image: {str(e)}")
 
 def reflect_prompt(prompt, style_img):
+    print(f"Reflecting prompt: '{prompt}'")
     # Convert input to PIL Image if needed
     if isinstance(style_img, str):
         image = get_image_from_url_or_base64(style_img)
@@ -63,11 +66,12 @@ def reflect_prompt(prompt, style_img):
     # Save the image temporarily
     local_image_path = "/tmp/style_image.jpg"
     image.save(local_image_path)
+    print(f"Saved reference image to {local_image_path}")
 
     conversation = [
         {
             "role": "User",
-            "content": f"Rewrite the prompt to match the style.",
+            "content": f"Rewrite the prompt to match the style, colors, and theme of the reference image; be verbose and detailed.",
             "images": [local_image_path],
         },
         {
@@ -88,6 +92,7 @@ def reflect_prompt(prompt, style_img):
     ).to(vl_gpt.device)
 
     inputs_embeds = vl_gpt.prepare_inputs_embeds(**prepare_inputs)
+    print("Generating revised prompt...")
     outputs = vl_gpt.language_model.generate(
         inputs_embeds=inputs_embeds,
         attention_mask=prepare_inputs.attention_mask,
@@ -98,36 +103,57 @@ def reflect_prompt(prompt, style_img):
         do_sample=False,
         use_cache=True
     )
-    return tokenizer.decode(outputs[0], skip_special_tokens=True).strip()
+    revised = tokenizer.decode(outputs[0], skip_special_tokens=True).strip()
+    print(f"Generated revised prompt: '{revised}'")
+    return revised
 
 
 def generate_image(prompt):
+    print(f"Generating image with prompt: '{prompt}'")
     image = pipe(prompt=prompt, num_inference_steps=30).images[0]
+    print(f"Image generated successfully, size: {image.size}")
     return image
 
 def handler(event):
-    inp = event.get("input", {})
-    prompt = inp.get("prompt", "")
-    style_img = inp.get("style_img_b64") or inp.get("style_img_url")
+    try:
+        print("Handler called with event:", event)
+        inp = event.get("input", {})
+        prompt = inp.get("prompt", "")
+        style_img = inp.get("style_img_b64") or inp.get("style_img_url")
 
-    if not prompt or not style_img:
-        return {"error": "prompt and either style_img_url or style_img_b64 are required"}
+        if not prompt or not style_img:
+            return {"error": "prompt and either style_img_url or style_img_b64 are required"}
 
-    revised_prompt = reflect_prompt(prompt, style_img)
-    image = generate_image(revised_prompt)
+        revised_prompt = reflect_prompt(prompt, style_img)
+        image = generate_image(revised_prompt)
 
-    buffered = BytesIO()
-    image.save(buffered, format="PNG")
-    img_b64 = base64.b64encode(buffered.getvalue()).decode("utf-8")
-
-    return {
-        "status": "COMPLETED",
-        "output": {
+        print("Encoding image...")
+        buffered = BytesIO()
+        image.save(buffered, format="PNG")
+        img_str = base64.b64encode(buffered.getvalue()).decode("utf-8")
+        print(f"Image encoded as base64, length: {len(img_str)} characters")
+        
+        result = {
             "prompt_final": revised_prompt,
-            "image_b64": img_b64
+            "image_b64": img_str
         }
-    }
+        
+        print(f"Returning result with keys: {list(result.keys())}")
+        # Ensure the result is properly formatted for RunPod
+        return {
+            "output": result
+        }
+        
+    except Exception as e:
+        print(f"Error in handler: {str(e)}")
+        print("Exception details:", traceback.format_exc())
+        return {
+            "output": None,
+            "error": str(e)
+        }
 
+# Start the serverless handler
+print("Starting RunPod Serverless handler...")
 runpod.serverless.start({
     "handler": handler
 })
