@@ -113,11 +113,28 @@ generateBtn.addEventListener("click", async () => {
       const result = await pollJobStatus(submitResponse.id);
       console.error("✅ Job completed:", result);
 
-      // Show result with a nice fade-in effect
-      const { prompt_final, image_b64 } = result.output;
+      // The data structure from RunPod includes a nested output object
+      if (!result || !result.output) {
+        console.error("Invalid response structure:", result);
+        throw new Error("Invalid response from server: missing output data");
+      }
+      
+      console.error("Output data:", result.output);
+      
+      const prompt_final = result.output.prompt_final || "No adjusted prompt returned";
+      const image_b64 = result.output.image_b64;
+      
+      if (!image_b64) {
+        console.error("No image data in response:", result.output);
+        throw new Error("No image data returned from the server");
+      }
       
       // Preload image
       const img = new Image();
+      img.onerror = (e) => {
+        console.error("Image load error:", e);
+        showNotification("Error loading generated image", "error");
+      };
       img.onload = () => {
         resultImg.src = img.src;
         originalPromptEl.textContent = prompt;
