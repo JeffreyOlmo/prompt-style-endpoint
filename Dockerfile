@@ -9,7 +9,8 @@ RUN apt-get update && apt-get install -y \
 RUN pip install --upgrade pip && \
     pip install torch torchvision --index-url https://download.pytorch.org/whl/cu118 && \
     pip install transformers accelerate diffusers \
-    pillow requests huggingface_hub safetensors
+    pillow requests huggingface_hub safetensors protobuf
+    
 
 # --- DeepSeek-VL
 RUN pip install git+https://github.com/deepseek-ai/DeepSeek-VL.git
