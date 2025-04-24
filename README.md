@@ -1,6 +1,6 @@
 ## Style-Based Image Generation with RunPod
 
-A powerful API endpoint for generating high-quality images based on text prompts and optional style reference images, deployed on RunPod.
+An API endpoint for generating images based on text prompts and optional style reference images, deployed on RunPod.
 
 ## Overview
 
