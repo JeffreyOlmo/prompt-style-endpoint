@@ -110,7 +110,7 @@ For detailed information about the models, see [Model Details](docs/MODEL_DETAIL
 ## Performance and Resources
 
 - **GPU Requirements**: At least 16GB VRAM (24GB+ recommended)
-- **Processing Time**: 10-30 seconds per image (depending on configuration)
+- **Processing Time**: 10-20 seconds per image (depending on configuration)
 - **Memory Usage**: ~30GB VRAM during peak usage
 - **Cost Considerations**: See deployment guide for RunPod pricing details
 
@@ -177,15 +177,6 @@ while True:
         break
 ```
 
-## Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
 
 ## License
 
