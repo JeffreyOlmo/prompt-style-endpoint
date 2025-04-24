@@ -71,7 +71,7 @@ def reflect_prompt(prompt, style_img):
     conversation = [
         {
             "role": "User",
-            "content": f"Rewrite the prompt to match the artistic style (colors, vibe, ect.) of the reference image: <image_placeholder> . Add description of this style while maintaining fidelity to the original prompt",
+            "content": f"Rewrite this prompt '{prompt}' to match the artistic style (colors, vibe, ect.) of the reference image: <image_placeholder> . Add description of this style while maintaining fidelity to the original prompt",
             "images": [local_image_path],
         },
         {
