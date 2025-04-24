@@ -71,7 +71,7 @@ def reflect_prompt(prompt, style_img):
     conversation = [
         {
             "role": "User",
-            "content": f"Rewrite this prompt '{prompt}' to match the artistic style (colors, vibe, ect.) of the reference image: <image_placeholder> . Add a succinct description of this style while maintaining fidelity to the original prompt. For example, if the prompt is a 'a wizard in a forest' and the picture is a pencil sketch, you should ouput something like: 'a wizard in a forest, detailed pencil sketch style with fine hatching, delicate line work, high contrast, grayscale palette, textured details, minimal background'",
+            "content": f"Rewrite this prompt '{prompt}' to match the artistic style (colors, vibe, ect.) of the reference image: <image_placeholder> . Add a evocative description of this style while maintaining fidelity to the original prompt. For example, if the prompt is a 'a wizard in a forest' and the picture is a pencil sketch, you should ouput something like: 'a wizard in a forest, detailed pencil sketch style with fine hatching, delicate line work, high contrast, grayscale palette, textured details, minimal background'",
             "images": [local_image_path],
         },
         {
