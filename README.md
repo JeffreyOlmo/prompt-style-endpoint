@@ -1,8 +1,6 @@
-# Style-Based Image Generation with RunPod
+## Style-Based Image Generation with RunPod
 
 A powerful API endpoint for generating high-quality images based on text prompts and optional style reference images, deployed on RunPod.
-
-![Banner Image](docs/banner.png)
 
 ## Overview
 
@@ -40,8 +38,6 @@ This project implements a RunPod serverless endpoint that combines the power of 
    ```bash
    cat src/handler.py
    ```
-
-3. Follow the [Setup Guide](docs/SETUP_GUIDE.md) to deploy your endpoint
 
 ### Using the API
 
@@ -103,11 +99,9 @@ For detailed information about the models, see [Model Details](docs/MODEL_DETAIL
 
 | Prompt | Style Reference | Generated Image |
 |--------|-----------------|-----------------|
-| "A castle on a hill at sunset" | [Impressionist Painting] | [Generated Castle Image] |
-| "A futuristic city skyline" | [Cyberpunk Style] | [Generated City Image] |
-| "A peaceful forest scene" | [Studio Ghibli Style] | [Generated Forest Image] |
+| "A rabit looking for foodt" | <img width="447" alt="Screenshot 2025-04-23 at 7 18 26 PM" src="https://github.com/user-attachments/assets/78318119-c577-4b39-91b4-b01600de00e3" /> |![download (7)](https://github.com/user-attachments/assets/6485495e-e540-4b61-9c18-44a4e1b629b6)|
+| "A wizard walking in the forest" | ![P04993-P00055f](https://github.com/user-attachments/assets/a886998b-8820-48ad-905f-4f9bacb596c3) | <img width="702" alt="Screenshot 2025-04-23 at 7 20 50 PM" src="https://github.com/user-attachments/assets/2324d7f3-d8bd-4834-a2e1-cff428cd73c5" /> |
 
-For more examples, see the [examples/](examples/) directory.
 
 ## Integration Examples
 
