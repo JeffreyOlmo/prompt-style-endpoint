@@ -100,7 +100,7 @@ For detailed information about the models, see [Model Details](docs/MODEL_DETAIL
 | Prompt | Style Reference | Generated Image |
 |--------|-----------------|-----------------|
 | "A rabit looking for foodt" | <img width="447" alt="Screenshot 2025-04-23 at 7 18 26 PM" src="https://github.com/user-attachments/assets/78318119-c577-4b39-91b4-b01600de00e3" /> |![download (7)](https://github.com/user-attachments/assets/6485495e-e540-4b61-9c18-44a4e1b629b6)|
-| "A wizard walking in the forest" | ![P04993-P00055f](https://github.com/user-attachments/assets/a886998b-8820-48ad-905f-4f9bacb596c3) | <img width="702" alt="Screenshot 2025-04-23 at 7 20 50 PM" src="https://github.com/user-attachments/assets/2324d7f3-d8bd-4834-a2e1-cff428cd73c5" /> |
+| "A cowboy riding a giant rabbit" | <img width="566" alt="Screenshot 2025-04-23 at 6 59 40 PM" src="https://github.com/user-attachments/assets/09e7a727-f1f3-48d8-a21c-396d19d74209" />| ![download (8)](https://github.com/user-attachments/assets/472ddc14-dbb2-4f5e-bc09-c7d2d415d909)|
 
 
 ## Integration Examples
