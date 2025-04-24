@@ -72,23 +72,6 @@ This project implements a RunPod serverless endpoint that combines the power of 
 
 For detailed API documentation, see [API Documentation](docs/API_DOCUMENTATION.md).
 
-## Folder Structure
-
-```
-style-image-generator/
-├── src/
-│   └── handler.py      # RunPod serverless handler implementation
-├── docs/
-│   ├── API_DOCUMENTATION.md  # API usage documentation
-│   ├── SETUP_GUIDE.md        # Deployment instructions
-│   └── MODEL_DETAILS.md      # Technical details about the models
-├── examples/
-│   ├── client_example.py     # Python client example
-│   └── sample_images/        # Sample input/output images
-├── Dockerfile          # Docker configuration for deployment
-└── README.md           # This file
-```
-
 ## Technical Details
 
 ### How It Works
